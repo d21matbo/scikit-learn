@@ -1637,6 +1637,12 @@ class KMeans(_BaseKMeans):
             init = check_array(init, dtype=X.dtype, copy=True, order="C")
             self._validate_center_shape(X, init)
 
+        if self._algorithm == 'bias':
+            bias_location = X[0]
+            X = X[1::]
+            bias_weight = sample_weight[0]
+            sample_weight = sample_weight[1::]
+
         # subtract of mean of x for more accurate distance computations
         if not sp.issparse(X):
             X_mean = X.mean(axis=0)
@@ -1651,6 +1657,9 @@ class KMeans(_BaseKMeans):
 
         if self._algorithm == "elkan":
             kmeans_single = _kmeans_single_elkan
+        elif self._algorithm == 'bias':
+            kmeans_single = _kmeans_single_lloyd_bias
+            self._check_mkl_vcomp(X, X.shape[0])
         else:
             kmeans_single = _kmeans_single_lloyd
             self._check_mkl_vcomp(X, X.shape[0])
@@ -1668,6 +1677,11 @@ class KMeans(_BaseKMeans):
             )
             if self.verbose:
                 print("Initialization complete")
+
+            if self._algorithm == 'bias' and i < 1:
+                bias_location -= X_mean
+                X = np.vstack((bias_location, X))
+                sample_weight = np.insert(sample_weight, 0, bias_weight)
 
             # run a k-means once
             labels, inertia, centers, n_iter_ = kmeans_single(
