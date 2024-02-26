@@ -430,7 +430,7 @@ def lloyd_bias_iter_chunked_dense(
         floating[::1] center_shift,          # OUT
         int n_threads,
         bint update_centers=True):
-    """Single iteration of K-means lloyd algorithm with dense input.
+    """Single iteration of K-means lloyd (bias) algorithm with dense input.
 
     Update labels and centers (inplace), for one iteration, distributed
     over data chunks.
@@ -528,7 +528,7 @@ def lloyd_bias_iter_chunked_dense(
             else:
                 end = start + n_samples_chunk
 
-            _update_chunk_dense(
+            _update_chunk_dense_bias(
                 X[start: end],
                 sample_weight[start: end],
                 centers_old,
@@ -602,7 +602,18 @@ cdef void _update_chunk_dense_bias(
           -2.0, &X[0, 0], n_features, &centers_old[0, 0], n_features,
           1.0, pairwise_distances, n_clusters)
 
-    for i in range(n_samples):
+    # Update each center with its relative distance to the first sample,
+    # instead of only updating the cluster closest to the sample.
+    # we use 'for k in range(n_features - 1)' since we dont want to affect
+    # the last feature in this specific use case. 
+    if update_centers:
+        for i in range(n_clusters):
+            weight_in_clusters[i] += sample_weight[i]
+            for k in range(n_features - 1):
+                centers_new[i * n_features + k] += X[0, k] * sample_weight[i]
+
+    # Lower bound is added since the first sample is already processed.
+    for i in range(1, n_samples):
         min_sq_dist = pairwise_distances[i * n_clusters]
         label = 0
         for j in range(1, n_clusters):
