@@ -827,10 +827,9 @@ def _kmeans_single_lloyd_bias(
     center_shift = np.zeros(n_clusters, dtype=X.dtype)
 
     if sp.issparse(X):
-        lloyd_iter = lloyd_iter_chunked_sparse
-        _inertia = _inertia_sparse
+        raise NotImplementedError()
     else:
-        lloyd_iter = lloyd_iter_chunked_dense
+        bias_iter = lloyd_bias_iter_chunked_dense
         _inertia = _inertia_dense
 
     strict_convergence = False
@@ -839,7 +838,7 @@ def _kmeans_single_lloyd_bias(
     # nested parallelism (i.e. BLAS) to avoid oversubscription.
     with threadpool_limits(limits=1, user_api="blas"):
         for i in range(max_iter):
-            lloyd_iter(
+            bias_iter(
                 X,
                 sample_weight,
                 centers,
@@ -851,7 +850,7 @@ def _kmeans_single_lloyd_bias(
             )
 
             if verbose:
-                inertia = _inertia(X, sample_weight, centers, labels, n_threads)
+                inertia = _inertia(X[1::], sample_weight[1::], centers, labels[1::], n_threads)
                 print(f"Iteration {i}, inertia {inertia}.")
 
             centers, centers_new = centers_new, centers
@@ -877,7 +876,7 @@ def _kmeans_single_lloyd_bias(
 
         if not strict_convergence:
             # rerun E-step so that predicted labels match cluster centers
-            lloyd_iter(
+            bias_iter(
                 X,
                 sample_weight,
                 centers,
@@ -889,9 +888,9 @@ def _kmeans_single_lloyd_bias(
                 update_centers=False,
             )
 
-    inertia = _inertia(X, sample_weight, centers, labels, n_threads)
+    inertia = _inertia(X[1::], sample_weight[1::], centers, labels[1::], n_threads)
 
-    return labels, inertia, centers, i + 1
+    return labels[1::], inertia, centers, i + 1
 
 
 def _labels_inertia(X, sample_weight, centers, n_threads=1, return_inertia=True):
