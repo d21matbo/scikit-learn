@@ -1535,7 +1535,7 @@ class KMeans(_BaseKMeans):
     _parameter_constraints: dict = {
         **_BaseKMeans._parameter_constraints,
         "copy_x": ["boolean"],
-        "algorithm": [StrOptions({"lloyd", "elkan"})],
+        "algorithm": [StrOptions({"lloyd", "elkan", "bias"})],
     }
 
     def __init__(
