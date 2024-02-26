@@ -51,7 +51,11 @@ from ._k_means_elkan import (
     init_bounds_dense,
     init_bounds_sparse,
 )
-from ._k_means_lloyd import lloyd_iter_chunked_dense, lloyd_iter_chunked_sparse
+from ._k_means_lloyd import (
+    lloyd_iter_chunked_dense, 
+    lloyd_iter_chunked_sparse,
+    lloyd_bias_iter_chunked_dense,
+)
 from ._k_means_minibatch import _minibatch_update_dense, _minibatch_update_sparse
 
 ###############################################################################
